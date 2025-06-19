@@ -1,0 +1,6 @@
+.env
+./backend/node_modules
+./frontend/node_modules
+./backend/combined-log
+./backend/error.log
+*.DS_STORE
