@@ -1,38 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import {
-    Container,
-    Box,
-    Typography,
-    Paper,
-    Tabs,
-    Tab,
-    Button,
-    TextField,
-    Grid,
-    Card,
-    CardContent,
-    List,
-    ListItem,
-    ListItemText,
-    Chip,
-    Alert,
-    Snackbar,
-    ToggleButton,
-    ToggleButtonGroup
-} from '@mui/material';
 import { io } from 'socket.io-client';
 import axios from 'axios';
-import ImageVerification from './components/ImageVerification';
-import LocationExtraction from './components/LocationExtraction';
-import EnhancedDisasterForm from './components/EnhancedDisasterForm';
+import './App.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 function App() {
-    const [tab, setTab] = useState(0);
     const [disasters, setDisasters] = useState([]);
     const [resources, setResources] = useState([]);
-    const [socialMedia, setSocialMedia] = useState([]);
+    const [activeTab, setActiveTab] = useState('disasters');
     const [newDisaster, setNewDisaster] = useState({
         title: '',
         location_name: '',
@@ -46,8 +22,9 @@ function App() {
         lat: '',
         lon: ''
     });
-    const [alert, setAlert] = useState({ open: false, message: '', severity: 'success' });
-    const [disasterFormMode, setDisasterFormMode] = useState('simple');
+    const [message, setMessage] = useState('');
+    const [geocodeText, setGeocodeText] = useState('');
+    const [geocodeResult, setGeocodeResult] = useState(null);
 
     // Connect to WebSocket
     useEffect(() => {
@@ -61,10 +38,6 @@ function App() {
             fetchResources();
         });
 
-        socket.on('social_media_updated', (data) => {
-            fetchSocialMedia();
-        });
-
         return () => {
             socket.disconnect();
         };
@@ -74,7 +47,6 @@ function App() {
     useEffect(() => {
         fetchDisasters();
         fetchResources();
-        fetchSocialMedia();
     }, []);
 
     const fetchDisasters = async () => {
@@ -82,7 +54,7 @@ function App() {
             const response = await axios.get(`${API_URL}/api/disasters`);
             setDisasters(response.data);
         } catch (error) {
-            showAlert('Error fetching disasters', 'error');
+            showMessage('Error fetching disasters', 'error');
         }
     };
 
@@ -91,16 +63,7 @@ function App() {
             const response = await axios.get(`${API_URL}/api/resources`);
             setResources(response.data);
         } catch (error) {
-            showAlert('Error fetching resources', 'error');
-        }
-    };
-
-    const fetchSocialMedia = async () => {
-        try {
-            const response = await axios.get(`${API_URL}/api/social-media`);
-            setSocialMedia(response.data);
-        } catch (error) {
-            showAlert('Error fetching social media', 'error');
+            showMessage('Error fetching resources', 'error');
         }
     };
 
@@ -113,9 +76,9 @@ function App() {
                 owner_id: 'test_user' // In a real app, this would come from authentication
             });
             setNewDisaster({ title: '', location_name: '', description: '', tags: '' });
-            showAlert('Disaster created successfully', 'success');
+            showMessage('Disaster created successfully', 'success');
         } catch (error) {
-            showAlert('Error creating disaster', 'error');
+            showMessage('Error creating disaster', 'error');
         }
     };
 
@@ -127,257 +90,217 @@ function App() {
                 disaster_id: disasters[0]?.id // In a real app, this would be selected by the user
             });
             setNewResource({ name: '', location_name: '', type: '', lat: '', lon: '' });
-            showAlert('Resource created successfully', 'success');
+            showMessage('Resource created successfully', 'success');
         } catch (error) {
-            showAlert('Error creating resource', 'error');
+            showMessage('Error creating resource', 'error');
         }
     };
 
-    const handleEnhancedDisasterCreated = (disaster) => {
-        showAlert('Enhanced disaster report created successfully', 'success');
+    const showMessage = (text, type) => {
+        setMessage({ text, type });
+        setTimeout(() => setMessage(''), 3000);
     };
 
-    const showAlert = (message, severity) => {
-        setAlert({ open: true, message, severity });
-    };
-
-    const handleCloseAlert = () => {
-        setAlert({ ...alert, open: false });
+    const handleGeocode = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await axios.post(`${API_URL}/api/geocode`, { text: geocodeText });
+            setGeocodeResult(response.data);
+        } catch (error) {
+            showMessage('Error geocoding location', 'error');
+        }
     };
 
     return (
-        <Container maxWidth="lg">
-            <Box sx={{ my: 4 }}>
-                <Typography variant="h4" component="h1" gutterBottom>
-                    Disaster Response Platform
-                </Typography>
+        <div className="App">
+            <header className="App-header">
+                <h1>Disaster Response Platform</h1>
+            </header>
 
-                <Paper sx={{ mb: 2 }}>
-                    <Tabs value={tab} onChange={(e, newValue) => setTab(newValue)}>
-                        <Tab label="Disasters" />
-                        <Tab label="Resources" />
-                        <Tab label="Social Media" />
-                        <Tab label="Image Verification" />
-                        <Tab label="Location Extraction" />
-                    </Tabs>
-                </Paper>
+            <nav className="nav-tabs">
+                <button
+                    className={activeTab === 'disasters' ? 'active' : ''}
+                    onClick={() => setActiveTab('disasters')}
+                >
+                    Disasters
+                </button>
+                <button
+                    className={activeTab === 'resources' ? 'active' : ''}
+                    onClick={() => setActiveTab('resources')}
+                >
+                    Resources
+                </button>
+            </nav>
 
-                {tab === 0 && (
-                    <Box>
-                        <Box sx={{ mb: 3 }}>
-                            <Typography variant="h6" gutterBottom>
-                                Create New Disaster
-                            </Typography>
-                            <ToggleButtonGroup
-                                value={disasterFormMode}
-                                exclusive
-                                onChange={(e, newMode) => newMode && setDisasterFormMode(newMode)}
-                                size="small"
-                            >
-                                <ToggleButton value="simple">Simple Form</ToggleButton>
-                                <ToggleButton value="enhanced">AI-Enhanced Form</ToggleButton>
-                            </ToggleButtonGroup>
-                        </Box>
+            {message && (
+                <div className={`message ${message.type}`}>
+                    {message.text}
+                </div>
+            )}
 
-                        {disasterFormMode === 'simple' ? (
-                            <Paper sx={{ p: 2, mb: 2 }}>
-                                <Typography variant="h6" gutterBottom>
-                                    Simple Disaster Form
-                                </Typography>
-                                <form onSubmit={handleCreateDisaster}>
-                                    <Grid container spacing={2}>
-                                        <Grid item xs={12} sm={6}>
-                                            <TextField
-                                                fullWidth
-                                                label="Title"
-                                                value={newDisaster.title}
-                                                onChange={(e) => setNewDisaster({ ...newDisaster, title: e.target.value })}
-                                                required
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
-                                            <TextField
-                                                fullWidth
-                                                label="Location"
-                                                value={newDisaster.location_name}
-                                                onChange={(e) => setNewDisaster({ ...newDisaster, location_name: e.target.value })}
-                                                required
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12}>
-                                            <TextField
-                                                fullWidth
-                                                label="Description"
-                                                multiline
-                                                rows={4}
-                                                value={newDisaster.description}
-                                                onChange={(e) => setNewDisaster({ ...newDisaster, description: e.target.value })}
-                                                required
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12}>
-                                            <TextField
-                                                fullWidth
-                                                label="Tags (comma-separated)"
-                                                value={newDisaster.tags}
-                                                onChange={(e) => setNewDisaster({ ...newDisaster, tags: e.target.value })}
-                                                required
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12}>
-                                            <Button type="submit" variant="contained" color="primary">
-                                                Create Disaster
-                                            </Button>
-                                        </Grid>
-                                    </Grid>
-                                </form>
-                            </Paper>
-                        ) : (
-                            <EnhancedDisasterForm onDisasterCreated={handleEnhancedDisasterCreated} />
-                        )}
+            <main className="main-content">
+                {activeTab === 'disasters' && (
+                    <div className="tab-content">
+                        <div className="form-section">
+                            <h2>Create New Disaster</h2>
+                            <form onSubmit={handleCreateDisaster} className="form">
+                                <div className="form-group">
+                                    <label>Title:</label>
+                                    <input
+                                        type="text"
+                                        value={newDisaster.title}
+                                        onChange={(e) => setNewDisaster({ ...newDisaster, title: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Location:</label>
+                                    <input
+                                        type="text"
+                                        value={newDisaster.location_name}
+                                        onChange={(e) => setNewDisaster({ ...newDisaster, location_name: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Description:</label>
+                                    <textarea
+                                        value={newDisaster.description}
+                                        onChange={(e) => setNewDisaster({ ...newDisaster, description: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Tags (comma-separated):</label>
+                                    <input
+                                        type="text"
+                                        value={newDisaster.tags}
+                                        onChange={(e) => setNewDisaster({ ...newDisaster, tags: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <button type="submit" className="btn btn-primary">
+                                    Create Disaster
+                                </button>
+                            </form>
+                        </div>
 
-                        <Typography variant="h6" gutterBottom>
-                            Active Disasters
-                        </Typography>
-                        <Grid container spacing={2}>
-                            {disasters.map((disaster) => (
-                                <Grid item xs={12} sm={6} md={4} key={disaster.id}>
-                                    <Card>
-                                        <CardContent>
-                                            <Typography variant="h6">{disaster.title}</Typography>
-                                            <Typography color="textSecondary">{disaster.location_name}</Typography>
-                                            <Typography variant="body2">{disaster.description}</Typography>
-                                            <Box sx={{ mt: 1 }}>
-                                                {disaster.tags.map((tag) => (
-                                                    <Chip key={tag} label={tag} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
-                                                ))}
-                                            </Box>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                            ))}
-                        </Grid>
-                    </Box>
+                        <div className="list-section">
+                            <h2>Active Disasters</h2>
+                            <div className="disasters-grid">
+                                {disasters.map((disaster) => (
+                                    <div key={disaster.id} className="disaster-card">
+                                        <h3>{disaster.title}</h3>
+                                        <p className="location">{disaster.location_name}</p>
+                                        <p className="description">{disaster.description}</p>
+                                        <div className="tags">
+                                            {disaster.tags && disaster.tags.map((tag, index) => (
+                                                <span key={index} className="tag">{tag}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 )}
 
-                {tab === 1 && (
-                    <Box>
-                        <Paper sx={{ p: 2, mb: 2 }}>
-                            <Typography variant="h6" gutterBottom>
-                                Add New Resource
-                            </Typography>
-                            <form onSubmit={handleCreateResource}>
-                                <Grid container spacing={2}>
-                                    <Grid item xs={12} sm={6}>
-                                        <TextField
-                                            fullWidth
-                                            label="Name"
-                                            value={newResource.name}
-                                            onChange={(e) => setNewResource({ ...newResource, name: e.target.value })}
-                                            required
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} sm={6}>
-                                        <TextField
-                                            fullWidth
-                                            label="Location"
-                                            value={newResource.location_name}
-                                            onChange={(e) => setNewResource({ ...newResource, location_name: e.target.value })}
-                                            required
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} sm={6}>
-                                        <TextField
-                                            fullWidth
-                                            label="Type"
-                                            value={newResource.type}
-                                            onChange={(e) => setNewResource({ ...newResource, type: e.target.value })}
-                                            required
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} sm={3}>
-                                        <TextField
-                                            fullWidth
-                                            label="Latitude"
+                {activeTab === 'resources' && (
+                    <div className="tab-content">
+                        <div className="form-section">
+                            <h2>Add New Resource</h2>
+                            <form onSubmit={handleCreateResource} className="form">
+                                <div className="form-group">
+                                    <label>Name:</label>
+                                    <input
+                                        type="text"
+                                        value={newResource.name}
+                                        onChange={(e) => setNewResource({ ...newResource, name: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Location:</label>
+                                    <input
+                                        type="text"
+                                        value={newResource.location_name}
+                                        onChange={(e) => setNewResource({ ...newResource, location_name: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Type:</label>
+                                    <input
+                                        type="text"
+                                        value={newResource.type}
+                                        onChange={(e) => setNewResource({ ...newResource, type: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label>Latitude:</label>
+                                        <input
                                             type="number"
+                                            step="any"
                                             value={newResource.lat}
                                             onChange={(e) => setNewResource({ ...newResource, lat: e.target.value })}
                                             required
                                         />
-                                    </Grid>
-                                    <Grid item xs={12} sm={3}>
-                                        <TextField
-                                            fullWidth
-                                            label="Longitude"
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Longitude:</label>
+                                        <input
                                             type="number"
+                                            step="any"
                                             value={newResource.lon}
                                             onChange={(e) => setNewResource({ ...newResource, lon: e.target.value })}
                                             required
                                         />
-                                    </Grid>
-                                    <Grid item xs={12}>
-                                        <Button type="submit" variant="contained" color="primary">
-                                            Add Resource
-                                        </Button>
-                                    </Grid>
-                                </Grid>
+                                    </div>
+                                </div>
+                                <button type="submit" className="btn btn-primary">
+                                    Add Resource
+                                </button>
                             </form>
-                        </Paper>
+                        </div>
 
-                        <Typography variant="h6" gutterBottom>
-                            Available Resources
-                        </Typography>
-                        <List>
-                            {resources.map((resource) => (
-                                <ListItem key={resource.id}>
-                                    <ListItemText
-                                        primary={resource.name}
-                                        secondary={`${resource.location_name} - ${resource.type}`}
-                                    />
-                                </ListItem>
-                            ))}
-                        </List>
-                    </Box>
+                        <div className="list-section">
+                            <h2>Available Resources</h2>
+                            <div className="resources-list">
+                                {resources.map((resource) => (
+                                    <div key={resource.id} className="resource-item">
+                                        <h3>{resource.name}</h3>
+                                        <p className="location">{resource.location_name}</p>
+                                        <p className="type">Type: {resource.type}</p>
+                                        <p className="coordinates">
+                                            Coordinates: {resource.lat}, {resource.lon}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 )}
-
-                {tab === 2 && (
-                    <Box>
-                        <Typography variant="h6" gutterBottom>
-                            Social Media Reports
-                        </Typography>
-                        <List>
-                            {socialMedia.map((report) => (
-                                <ListItem key={report.id}>
-                                    <ListItemText
-                                        primary={report.post}
-                                        secondary={`Posted by ${report.user} at ${new Date(report.timestamp).toLocaleString()}`}
-                                    />
-                                </ListItem>
-                            ))}
-                        </List>
-                    </Box>
-                )}
-
-                {tab === 3 && (
-                    <ImageVerification />
-                )}
-
-                {tab === 4 && (
-                    <LocationExtraction />
-                )}
-
-                <Snackbar
-                    open={alert.open}
-                    autoHideDuration={6000}
-                    onClose={handleCloseAlert}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                >
-                    <Alert onClose={handleCloseAlert} severity={alert.severity}>
-                        {alert.message}
-                    </Alert>
-                </Snackbar>
-            </Box>
-        </Container>
+                <div className="form-section">
+                    <h2>Geocode</h2>
+                    <form onSubmit={handleGeocode} className="form">
+                        <div className="form-group">
+                            <label>Location:</label>
+                            <input
+                                type="text"
+                                value={geocodeText}
+                                onChange={(e) => setGeocodeText(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <button type="submit" className="btn btn-primary">
+                            Geocode
+                        </button>
+                    </form>
+                </div>
+            </main>
+        </div>
     );
 }
 
