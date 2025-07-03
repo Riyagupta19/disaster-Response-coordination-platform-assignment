@@ -1,184 +1,134 @@
 # Disaster Response Coordination Platform
 
-A MERN stack application for coordinating disaster response efforts by aggregating real-time data from various sources.
+A simple web application for coordinating disaster response efforts. This platform allows users to report disasters and manage available resources.
 
 ## Features
 
-- Disaster Data Management: CRUD operations for disaster records with audit trail
-- Location Extraction and Geocoding: Using Google Gemini API and mapping services
-- Real-Time Social Media Monitoring: Integration with Twitter/Bluesky API
-- Geospatial Resource Mapping: Using Supabase's PostGIS capabilities
-- Official Updates Aggregation: Fetching from government/relief websites
-- Image Verification: Using Google Gemini API for authenticity checks
-- Real-time Updates: WebSocket integration for live data updates
+- **Disaster Management**: Create and view disaster reports with location, description, and tags
+- **Resource Management**: Add and track available resources with location coordinates
+- **Real-time Updates**: Live updates using WebSocket connections
+- **Simple Interface**: Clean, user-friendly interface built with React
 
 ## Tech Stack
 
-- Backend: Node.js, Express.js
-- Database: Supabase (PostgreSQL with PostGIS)
-- Real-time: Socket.IO
-- AI/ML: Google Gemini API
-- Mapping: Google Maps API
-- Frontend: React.js (minimal implementation)
+### Frontend
+- React 18
+- Socket.IO Client
+- Axios for API calls
+- Basic CSS styling
 
-## Prerequisites
+### Backend
+- Node.js with Express
+- Socket.IO for real-time communication
+- Supabase for database
+- Basic error handling
 
+## Setup Instructions
+
+### Prerequisites
 - Node.js (v14 or higher)
+- npm or yarn
 - Supabase account
-- Google Cloud account (for Gemini API and Maps API)
-- Twitter API access (optional)
 
-## Environment Variables
+### Backend Setup
 
-Create a `.env` file in the backend directory with the following variables:
+1. Navigate to the backend directory:
+```bash
+cd backend
+```
 
-```env
-# Server Configuration
-PORT=5000
-NODE_ENV=development
-FRONTEND_URL=http://localhost:3000
+2. Install dependencies:
+```bash
+npm install
+```
 
-# Supabase Configuration
+3. Create a `.env` file in the backend directory with your Supabase credentials:
+```
 SUPABASE_URL=your_supabase_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
-
-# Google Gemini API
-GEMINI_API_KEY=your_gemini_api_key
-
-# Google Maps API
-GOOGLE_MAPS_API_KEY=your_google_maps_api_key
-
-# Twitter API (optional)
-TWITTER_API_KEY=your_twitter_api_key
-TWITTER_API_SECRET=your_twitter_api_secret
-TWITTER_ACCESS_TOKEN=your_twitter_access_token
-TWITTER_ACCESS_SECRET=your_twitter_access_secret
+PORT=5000
 ```
 
-## Setup
-
-1. Clone the repository:
+4. Start the backend server:
 ```bash
-git clone [repository-url]
-cd disaster-response-platform
-```
-
-2. Install backend dependencies:
-```bash
-cd backend
-npm install
-```
-
-3. Install frontend dependencies:
-```bash
-cd ../frontend
-npm install
-```
-
-4. Set up Supabase:
-   - Create a new project in Supabase
-   - Run the SQL migrations in `backend/src/db/migrations/001_initial_schema.sql`
-   - Copy the project URL and anon key to your `.env` file
-
-5. Start the development servers:
-
-Backend:
-```bash
-cd backend
-npm run dev
-```
-
-Frontend:
-```bash
-cd frontend
 npm start
 ```
+
+### Frontend Setup
+
+1. Navigate to the frontend directory:
+```bash
+cd frontend
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Create a `.env` file in the frontend directory:
+```
+REACT_APP_API_URL=http://localhost:5000
+```
+
+4. Start the frontend development server:
+```bash
+npm start
+```
+
+## Database Schema
+
+### Disasters Table
+- `id` (UUID, Primary Key)
+- `title` (Text)
+- `location_name` (Text)
+- `description` (Text)
+- `tags` (Array)
+- `created_at` (Timestamp)
+
+### Resources Table
+- `id` (UUID, Primary Key)
+- `name` (Text)
+- `location_name` (Text)
+- `type` (Text)
+- `lat` (Numeric)
+- `lon` (Numeric)
+- `created_at` (Timestamp)
 
 ## API Endpoints
 
 ### Disasters
+- `GET /api/disasters` - Get all disasters
 - `POST /api/disasters` - Create a new disaster
-- `GET /api/disasters` - Get all disasters (with optional tag filter)
 - `PUT /api/disasters/:id` - Update a disaster
 - `DELETE /api/disasters/:id` - Delete a disaster
 
-### Social Media
-- `GET /api/disasters/:id/social-media` - Get social media reports for a disaster
-- `POST /api/disasters/:id/social-media` - Add a new social media report
-
 ### Resources
-- `GET /api/resources/nearby` - Get resources near a location
+- `GET /api/resources` - Get all resources
 - `POST /api/resources` - Add a new resource
-- `GET /api/resources/disaster/:disasterId` - Get resources for a disaster
 - `PUT /api/resources/:id` - Update a resource
+- `DELETE /api/resources/:id` - Delete a resource
 
-### Geocoding
-- `POST /api/geocode` - Extract location and get coordinates
+## Usage
 
-### Image Verification
-- `POST /api/disasters/:id/verify-image` - Verify image authenticity
+1. **Creating a Disaster Report**:
+   - Navigate to the "Disasters" tab
+   - Fill in the title, location, description, and tags
+   - Click "Create Disaster"
 
-## WebSocket Events
+2. **Adding Resources**:
+   - Navigate to the "Resources" tab
+   - Fill in the resource details including coordinates
+   - Click "Add Resource"
 
-- `disaster_updated` - Emitted when a disaster is created/updated/deleted
-- `social_media_updated` - Emitted when new social media reports are received
-- `resources_updated` - Emitted when resources are updated
+3. **Viewing Data**:
+   - All disasters and resources are displayed in real-time
+   - Data updates automatically when changes are made
 
-## Database Schema
+## Development
 
-### Disasters
-- id (UUID)
-- title (TEXT)
-- location_name (TEXT)
-- location (GEOGRAPHY)
-- description (TEXT)
-- tags (TEXT[])
-- owner_id (TEXT)
-- created_at (TIMESTAMPTZ)
-- updated_at (TIMESTAMPTZ)
-- audit_trail (JSONB)
-
-### Reports
-- id (UUID)
-- disaster_id (UUID)
-- user_id (TEXT)
-- content (TEXT)
-- image_url (TEXT)
-- verification_status (TEXT)
-- created_at (TIMESTAMPTZ)
-- updated_at (TIMESTAMPTZ)
-
-### Resources
-- id (UUID)
-- disaster_id (UUID)
-- name (TEXT)
-- location_name (TEXT)
-- location (GEOGRAPHY)
-- type (TEXT)
-- created_at (TIMESTAMPTZ)
-- updated_at (TIMESTAMPTZ)
-
-### Cache
-- key (TEXT)
-- value (JSONB)
-- expires_at (TIMESTAMPTZ)
-- created_at (TIMESTAMPTZ)
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+This is a simple project suitable for learning purposes. The code is intentionally kept basic and readable, making it easy to understand and modify.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- Google Gemini API for AI capabilities
-- Supabase for database and real-time features
-- Twitter/Bluesky for social media integration
-- PostGIS for geospatial functionality 
+This project is open source and available under the MIT License. 
